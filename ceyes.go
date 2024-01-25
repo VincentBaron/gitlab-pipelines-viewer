@@ -25,6 +25,11 @@ type PipelineProject struct {
 	ProjectName string
 }
 
+type GetPipelinesParams struct {
+	Me         bool
+	ProjectIDs []string
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "ci",
 	Short: "CI/CD pipeline viewer",
@@ -41,7 +46,25 @@ var allCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		getPipelines(client, projects)
+		getPipelines(client, GetPipelinesParams{ProjectIDs: projects})
+	},
+}
+
+var meCmd = &cobra.Command{
+	Use:   "me",
+	Short: "Display my ongoing pipelines",
+	Run: func(cmd *cobra.Command, args []string) {
+		projects := viper.GetStringSlice("projects")
+		token := viper.GetString("token")
+
+		client, err := gitlab.NewClient(token)
+		if err != nil {
+			log.Fatal(err)
+		}
+		getPipelines(client, GetPipelinesParams{
+			ProjectIDs: projects,
+			Me:         true,
+		})
 	},
 }
 
@@ -53,7 +76,7 @@ var projectCmd = &cobra.Command{
 		projectID := args[0]
 		// token := viper.GetString("token")
 
-		getPipelines(nil, []string{projectID})
+		getPipelines(nil, GetPipelinesParams{ProjectIDs: []string{projectID}})
 	},
 }
 
@@ -202,7 +225,7 @@ func addProjectToConfig(projectName string) {
 
 func main() {
 	// ASCII Art
-	data, err := ioutil.ReadFile("banner.txt")
+	data, err := ioutil.ReadFile("/Users/vincentbaron/personal/ceyes/banner.txt")
 	if err != nil {
 		fmt.Println("File reading error", err)
 		return
@@ -227,14 +250,14 @@ func main() {
 		log.Fatalf("Error reading config file, %s", err)
 	}
 
-	rootCmd.AddCommand(allCmd, projectCmd, addProject, removeProject)
+	rootCmd.AddCommand(allCmd, projectCmd, addProject, removeProject, meCmd)
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func getPipelines(_ *gitlab.Client, projectIDs []string) {
-	err := godotenv.Load()
+func getPipelines(_ *gitlab.Client, params GetPipelinesParams) {
+	err := godotenv.Load("/Users/vincentbaron/personal/ceyes/.env")
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
@@ -248,8 +271,16 @@ func getPipelines(_ *gitlab.Client, projectIDs []string) {
 
 	var allPipelines []PipelineProject
 
-	for _, id := range projectIDs {
-		pipelines, _, err := client.Pipelines.ListProjectPipelines(id, &gitlab.ListProjectPipelinesOptions{})
+	for _, id := range params.ProjectIDs {
+		var options gitlab.ListProjectPipelinesOptions
+		if params.Me {
+			user, _, err := client.Users.CurrentUser()
+			if err != nil {
+				log.Fatal(err)
+			}
+			options = gitlab.ListProjectPipelinesOptions{Username: gitlab.String(user.Username)}
+		}
+		pipelines, _, err := client.Pipelines.ListProjectPipelines(id, &options)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -298,6 +329,7 @@ func getPipelines(_ *gitlab.Client, projectIDs []string) {
 		if len(pipeline.Pipeline.Ref) > maxRefLen {
 			maxRefLen = len(pipeline.Pipeline.Ref)
 		}
+
 	}
 
 	// Print data
@@ -343,10 +375,10 @@ func getPipelines(_ *gitlab.Client, projectIDs []string) {
 			log.Fatal(err)
 		}
 		commitMessage := commit.Title
-		if len(commitMessage) > 30 {
-			commitMessage = commitMessage[:27] + "..."
+		if len(commitMessage) > 25 {
+			commitMessage = commitMessage[:22] + "..."
 		}
-		color.New(color.FgHiBlack).Printf("|📝 %-30s", commitMessage)
+		color.New(color.FgHiBlack).Printf("|📝 %-25s", commitMessage)
 
 		// Iterate over stages in the defined order
 		for _, stage := range stageOrder {
