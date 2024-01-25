@@ -282,14 +282,14 @@ func getPipelines(_ *gitlab.Client, projectIDs []string) {
 
 	// Sort pipelines by creation date in descending order
 	sort.SliceStable(allPipelines, func(i, j int) bool {
-		return allPipelines[i].Pipeline.CreatedAt.After(*allPipelines[j].Pipeline.CreatedAt)
+		return allPipelines[i].Pipeline.UpdatedAt.After(*allPipelines[j].Pipeline.UpdatedAt)
 	})
 
 	// Calculate maximum lengths
 	maxProjectNameLen := 0
 	maxRefLen := 0
 	for _, pipeline := range allPipelines {
-		if pipeline.Pipeline.CreatedAt.Before(startOfDay) {
+		if pipeline.Pipeline.UpdatedAt.Before(startOfDay) {
 			continue
 		}
 		if len(pipeline.ProjectName) > maxProjectNameLen {
@@ -303,7 +303,7 @@ func getPipelines(_ *gitlab.Client, projectIDs []string) {
 	// Print data
 	for _, pipeline := range allPipelines {
 		// Only consider pipelines created after 8 AM
-		if pipeline.Pipeline.CreatedAt.Before(startOfDay) {
+		if pipeline.Pipeline.UpdatedAt.Before(startOfDay) {
 			continue
 		}
 
@@ -335,7 +335,7 @@ func getPipelines(_ *gitlab.Client, projectIDs []string) {
 		}
 
 		colorPrinter("🚀 %-*s", maxProjectNameLen, pipeline.ProjectName)
-		color.New(color.FgBlue).Printf("|🪵 %-*s", maxRefLen, pipeline.Pipeline.Ref)
+		color.New(color.FgBlue).Printf("|🪵  %-*s", maxRefLen, pipeline.Pipeline.Ref)
 
 		// Get the commit message
 		commit, _, err := client.Commits.GetCommit(strconv.Itoa(pipeline.Pipeline.ProjectID), pipeline.Pipeline.SHA)
