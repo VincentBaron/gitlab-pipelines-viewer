@@ -4,14 +4,19 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/vincentbaron/ceyes/models"
 	"github.com/vincentbaron/ceyes/pkg"
 	"github.com/xanzy/go-gitlab"
 )
+
+// Global client variable
+var client *gitlab.Client
 
 var rootCmd = &cobra.Command{
 	Use:   "ci",
@@ -57,8 +62,6 @@ var projectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		projectID := args[0]
-		// token := viper.GetString("token")
-
 		pkg.GetPipelines(nil, models.GetPipelinesParams{ProjectIDs: []string{projectID}})
 	},
 }
@@ -68,7 +71,7 @@ var addProject = &cobra.Command{
 	Short: "add a project to the config",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pkg.AddProjectToConfig(args[0])
+		pkg.AddProjectToConfig(client, args[0])
 	},
 }
 
@@ -77,13 +80,37 @@ var removeProject = &cobra.Command{
 	Short: "remove a project from the config",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pkg.RemoveProjectFromConfig(args[0])
+		pkg.RemoveProjectFromConfig(client, args[0])
 	},
 }
 
 func main() {
+	// Get the current working directory
+	cwd, err := os.Getwd()
+	println(cwd)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// cwd = filepath.Dir(cwd)
+
+	err = godotenv.Load(cwd + "/.env")
+	println(cwd)
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	token := os.Getenv("TOKEN")
+	println(token)
+
+	client, err = gitlab.NewClient(token, gitlab.WithBaseURL("https://gitlab.side.co"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// ASCII Art
-	data, err := ioutil.ReadFile("/Users/vincentbaron/personal/ceyes/banner.txt")
+	bannerPath := cwd + "/assets/banner.txt"
+	data, err := ioutil.ReadFile(bannerPath)
 	if err != nil {
 		fmt.Println("File reading error", err)
 		return
@@ -101,7 +128,7 @@ func main() {
 	// Rest of your code
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("/Users/vincentbaron/personal/ceyes")
+	viper.AddConfigPath(cwd)
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {

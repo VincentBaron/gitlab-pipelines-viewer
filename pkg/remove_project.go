@@ -3,30 +3,13 @@ package pkg
 import (
 	"io/ioutil"
 	"log"
-	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/vincentbaron/ceyes/models"
 	"github.com/xanzy/go-gitlab"
 	"gopkg.in/yaml.v2"
 )
 
-func RemoveProjectFromConfig(projectName string) {
-	// Load environment variables
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
-	// Get GitLab token
-	token := os.Getenv("TOKEN")
-
-	// Create GitLab client
-	client, err := gitlab.NewClient(token, gitlab.WithBaseURL("https://gitlab.side.co"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func RemoveProjectFromConfig(client *gitlab.Client, projectName string) {
 	// Search for the project
 	options := &gitlab.ListProjectsOptions{
 		Search: gitlab.String(projectName),

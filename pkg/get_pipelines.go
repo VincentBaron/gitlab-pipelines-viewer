@@ -3,13 +3,11 @@ package pkg
 import (
 	"fmt"
 	"log"
-	"os"
 	"sort"
 	"strconv"
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/joho/godotenv"
 	"github.com/vincentbaron/ceyes/models"
 	"github.com/xanzy/go-gitlab"
 )
@@ -19,19 +17,7 @@ type PipelineProject struct {
 	ProjectName string
 }
 
-func GetPipelines(_ *gitlab.Client, params models.GetPipelinesParams) {
-	err := godotenv.Load("/Users/vincentbaron/personal/ceyes/.env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
-	token := os.Getenv("TOKEN")
-
-	client, err := gitlab.NewClient(token, gitlab.WithBaseURL("https://gitlab.side.co"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func GetPipelines(client *gitlab.Client, params models.GetPipelinesParams) {
 	var allPipelines []PipelineProject
 
 	// Get the current time in Paris
