@@ -1,4 +1,4 @@
-module github.com/VincentBaron/ceyes
+module github.com/vincentbaron/ceyes
 
 go 1.20
 
