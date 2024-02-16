@@ -1,3 +1,4 @@
 .env
 ceyes
-.vscode
+.vscode/
+.vscode/launch.json

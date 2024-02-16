@@ -28,12 +28,6 @@ var allCmd = &cobra.Command{
 	Short: "Display all ongoing pipelines",
 	Run: func(cmd *cobra.Command, args []string) {
 		projects := viper.GetStringSlice("projects")
-		token := viper.GetString("token")
-
-		client, err := gitlab.NewClient(token)
-		if err != nil {
-			log.Fatal(err)
-		}
 		pkg.GetPipelines(client, models.GetPipelinesParams{ProjectIDs: projects})
 	},
 }
@@ -43,12 +37,6 @@ var meCmd = &cobra.Command{
 	Short: "Display my ongoing pipelines",
 	Run: func(cmd *cobra.Command, args []string) {
 		projects := viper.GetStringSlice("projects")
-		token := viper.GetString("token")
-
-		client, err := gitlab.NewClient(token)
-		if err != nil {
-			log.Fatal(err)
-		}
 		pkg.GetPipelines(client, models.GetPipelinesParams{
 			ProjectIDs: projects,
 			Me:         true,
@@ -62,7 +50,7 @@ var projectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		projectID := args[0]
-		pkg.GetPipelines(nil, models.GetPipelinesParams{ProjectIDs: []string{projectID}})
+		pkg.GetPipelines(client, models.GetPipelinesParams{ProjectIDs: []string{projectID}})
 	},
 }
 
@@ -87,7 +75,6 @@ var removeProject = &cobra.Command{
 func main() {
 	// Get the current working directory
 	cwd, err := os.Getwd()
-	println(cwd)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -95,13 +82,11 @@ func main() {
 	// cwd = filepath.Dir(cwd)
 
 	err = godotenv.Load(cwd + "/.env")
-	println(cwd)
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
 	token := os.Getenv("TOKEN")
-	println(token)
 
 	client, err = gitlab.NewClient(token, gitlab.WithBaseURL("https://gitlab.side.co"))
 	if err != nil {

@@ -36,7 +36,7 @@ func GetPipelines(client *gitlab.Client, params models.GetPipelinesParams) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			options.Username = gitlab.String(user.Username)
+			options.Username = gitlab.Ptr(user.Username)
 		}
 		pipelines, _, err := client.Pipelines.ListProjectPipelines(id, &options)
 		if err != nil {
