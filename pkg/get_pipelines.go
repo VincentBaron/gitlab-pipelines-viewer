@@ -73,9 +73,6 @@ func GetPipelines(_ *gitlab.Client, params models.GetPipelinesParams) {
 		}
 	}
 
-	// Define the order of stages
-	stageOrder := []string{"check", "sonar", "build", "scan", "squad1", "squad2", "dev", "demo", "production"}
-
 	// Sort pipelines by creation date in descending order
 	sort.SliceStable(allPipelines, func(i, j int) bool {
 		return allPipelines[i].Pipeline.UpdatedAt.After(*allPipelines[j].Pipeline.UpdatedAt)
@@ -97,16 +94,39 @@ func GetPipelines(_ *gitlab.Client, params models.GetPipelinesParams) {
 	// Print data
 	for _, pipeline := range allPipelines {
 		// Get jobs of the pipeline
-		jobs, _, err := client.Jobs.ListPipelineJobs(strconv.Itoa(pipeline.Pipeline.ProjectID), pipeline.Pipeline.ID, &gitlab.ListJobsOptions{})
+		jobs, _, err := client.Jobs.ListPipelineJobs(strconv.Itoa(pipeline.Pipeline.ProjectID), pipeline.Pipeline.ID, &gitlab.ListJobsOptions{
+			ListOptions: gitlab.ListOptions{
+				PerPage: 100},
+		})
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		// Group jobs by stage
-		stageJobs := make(map[string][]*gitlab.Job)
-		for _, job := range jobs {
-			stageJobs[job.Stage] = append(stageJobs[job.Stage], job)
+		// Define the order of jobs
+		jobOrder := map[string]int{
+			"check":               1,
+			"sonarqube-check":     2,
+			"build":               3,
+			"vulnerability_check": 4,
+			"deploy to squad-1":   5,
+			"deploy to squad-2":   6,
+			"deploy to dev":       7,
+			"deploy to prod":      8,
+			"sentry_release":      9,
 		}
+
+		// Filter jobs
+		filteredJobs := make([]*gitlab.Job, 0)
+		for _, job := range jobs {
+			if _, ok := jobOrder[job.Name]; ok {
+				filteredJobs = append(filteredJobs, job)
+			}
+		}
+
+		// Sort jobs by the defined order
+		sort.SliceStable(filteredJobs, func(i, j int) bool {
+			return jobOrder[filteredJobs[i].Name] < jobOrder[filteredJobs[j].Name]
+		})
 
 		var colorPrinter func(format string, a ...interface{})
 
@@ -123,6 +143,7 @@ func GetPipelines(_ *gitlab.Client, params models.GetPipelinesParams) {
 			colorPrinter = color.New(color.FgWhite).PrintfFunc()
 		}
 
+		// Print pipeline and commit info
 		colorPrinter("🚀 %-*s", maxProjectNameLen, pipeline.ProjectName)
 		color.New(color.FgBlue).Printf("|🪵  %-*s", maxRefLen, pipeline.Pipeline.Ref)
 
@@ -137,60 +158,31 @@ func GetPipelines(_ *gitlab.Client, params models.GetPipelinesParams) {
 		}
 		color.New(color.FgHiBlack).Printf("|📝 %-25s", commitMessage)
 
-		// Iterate over stages in the defined order
-		for _, stage := range stageOrder {
-			jobs, ok := stageJobs[stage]
-			if !ok {
-				continue
+		// Iterate over jobs and print their status
+		for _, job := range filteredJobs {
+			stageName := job.Stage
+			if stageName == "production" {
+				stageName = "prod"
 			}
-
-			stageStatus := "other"
-			allJobsManual := true
-			for _, job := range jobs {
-				if job.Status != "manual" {
-					allJobsManual = false
-				}
-				if job.Status == "success" {
-					stageStatus = "passed"
-					continue
-				}
-				if job.Status == "running" {
-					stageStatus = "running"
-					break
-				} else if job.Status == "pending" {
-					stageStatus = "pending"
-					break
-				} else if job.Status == "failed" {
-					if job.AllowFailure {
-						stageStatus = "allowed to fail"
-					} else {
-						stageStatus = "failed"
-					}
-					break
-				}
-			}
-			if allJobsManual {
-				stageStatus = "manual"
-			}
-
-			// fmt.Println(stageStatus)
-			switch stageStatus {
+			switch job.Status {
 			case "running":
-				color.New(color.FgMagenta).Printf("|🟣 %-6s", stage)
+				color.New(color.FgMagenta).Printf("|🟣 %-7s", stageName)
 			case "failed":
-				color.New(color.FgRed).Printf("|💥 %-6s", stage)
-			case "passed":
-				color.New(color.FgGreen).Printf("|✅ %-6s", stage)
+				color.New(color.FgRed).Printf("|💥 %-7s", stageName)
+			case "success":
+				color.New(color.FgGreen).Printf("|✅ %-7s", stageName)
 			case "other":
-				color.New(color.FgBlue).Printf("|👋 %-6s", stage)
+				color.New(color.FgBlue).Printf("|👋 %-7s", stageName)
 			case "pending":
-				color.New(color.FgWhite).Printf("|⏳ %-6s", stage)
-			case "allowed to fail":
-				color.New(color.FgYellow).Printf("|🟨 %-6s", stage)
+				color.New(color.FgWhite).Printf("|⏳ %-7s", stageName)
+			case "canceled":
+				color.New(color.FgYellow).Printf("|⏹️  %-7s", stageName)
+			case "skipped":
+				color.New(color.FgYellow).Printf("|⏭️  %-7s", stageName)
 			default:
-				color.New(color.FgHiBlack).Printf("|❓ %-6s", stage)
+				color.New(color.FgHiBlack).Printf("|❓ %-7s", stageName)
 			}
 		}
-		fmt.Println("\n-------------------------------------------------------------------------------------------------------------------------------------------------------")
+		fmt.Println("\n-------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
 	}
 }
