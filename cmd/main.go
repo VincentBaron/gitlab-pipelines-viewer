@@ -72,6 +72,15 @@ var removeProject = &cobra.Command{
 	},
 }
 
+var cancelStage = &cobra.Command{
+	Use:   "cl [pipeline-id] [stage-name]",
+	Short: "Cancel a job by its stage name",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		pkg.CancelStage(client, args)
+	},
+}
+
 func main() {
 	// Get the current working directory
 	cwd, err := os.Getwd()
@@ -104,11 +113,11 @@ func main() {
 	lines := strings.Split(string(data), "\n")
 
 	// Print lines 3 to 10
-	fmt.Println("\n\n")
+	fmt.Println()
 	for i := 2; i < 10; i++ {
 		fmt.Println(lines[i])
 	}
-	fmt.Println("\n\n")
+	fmt.Println()
 
 	// Rest of your code
 	viper.SetConfigName("config")
@@ -120,7 +129,7 @@ func main() {
 		log.Fatalf("Error reading config file, %s", err)
 	}
 
-	rootCmd.AddCommand(allCmd, projectCmd, addProject, removeProject, meCmd)
+	rootCmd.AddCommand(allCmd, projectCmd, addProject, removeProject, meCmd, cancelStage)
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}

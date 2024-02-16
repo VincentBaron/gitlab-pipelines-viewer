@@ -130,7 +130,7 @@ func GetPipelines(client *gitlab.Client, params models.GetPipelinesParams) {
 		}
 
 		// Print pipeline and commit info
-		colorPrinter("🚀 %-*s", maxProjectNameLen, pipeline.ProjectName)
+		colorPrinter("#%d %-*s", pipeline.Pipeline.ID, maxProjectNameLen, pipeline.ProjectName)
 		color.New(color.FgBlue).Printf("|🪵  %-*s", maxRefLen, pipeline.Pipeline.Ref)
 
 		// Get the commit message
