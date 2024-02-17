@@ -81,6 +81,7 @@ func GetPipelines(client *gitlab.Client, params models.GetPipelinesParams) {
 	for _, pipeline := range allPipelines {
 		// Get jobs of the pipeline
 		jobs, _, err := client.Jobs.ListPipelineJobs(strconv.Itoa(pipeline.Pipeline.ProjectID), pipeline.Pipeline.ID, &gitlab.ListJobsOptions{
+			IncludeRetried: gitlab.Ptr(true),
 			ListOptions: gitlab.ListOptions{
 				PerPage: 100},
 		})

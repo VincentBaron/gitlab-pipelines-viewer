@@ -58,6 +58,21 @@ make clean // clean the project
 make // clean + build
 ```
 
+## Job Status Color Code
+
+In the output of the program, each job status is represented by a different color and emoji:
+
+- 🟣 Magenta: The job is currently running.
+- 💥 Red: The job has failed.
+- ✅ Green: The job has completed successfully.
+- 👋 Blue: The job is in the 'other' status. This is a catch-all for statuses not covered by other colors.
+- ⏳ White: The job is pending, meaning it is waiting to be processed.
+- ⏹️ Yellow: The job has been canceled.
+- ⏭️ Yellow: The job has been skipped.
+- ❓ Black: The job is in an unknown status. This is used for any status not covered by the above cases.
+
+The stage name is printed next to the emoji. If the stage name is 'production', it is shortened to 'prod'.
+
 ## Contributing
 
 If you want to contribute to this project, please feel free to fork the repository, make your changes, and open a pull request.
